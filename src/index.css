@@ -1,0 +1,23 @@
+/* Reset Vite defaults */
+body {
+  margin: 0;
+  padding: 0;
+}
+
+/* 
+ * NOTE: We do NOT override the default visibility:hidden rule here.
+ * The external IX2 engine handles this:
+ * 1. Page loads with html.w-mod-js — elements are hidden by CSS
+ * 2. Animation JS loads, adds w-mod-ix3 class to <html>
+ * 3. IX2 engine sets initial states and animates elements into view
+ * This gives us the exact same entrance animations as the original.
+ */
+
+/* Hide dynamically injected badge */
+.w-webflow-badge, .w-custom-badge {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  z-index: -99999 !important;
+}
