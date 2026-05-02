@@ -8,9 +8,19 @@ const COMMANDS = {
   skills      List tech stack
   projects    List projects
   contact     Contact info
+  ls          List files
+  cat [file]  Read file
   theme       Toggle dark/light
   clear       Clear terminal
   sudo hire khushi   Easter egg`,
+  ls: () => `about.md  projects.json  skills.ts  secrets.txt  resume.pdf`,
+  cat: (args) => {
+    if (!args[0]) return 'Usage: cat [filename]';
+    const file = args[0].toLowerCase();
+    if (file === 'secrets.txt') return 'Easter Egg: I can solve a Rubik\'s cube in under 30 seconds! 🧩';
+    if (file === 'about.md') return 'A developer who loves space and clean code.';
+    return `File not found: ${args[0]}`;
+  },
   whoami: () => `Khushi Jain — Full Stack Developer & Data Engineer
   Location: India
   Status: Open to opportunities`,
@@ -51,8 +61,24 @@ export default function Terminal({ isOpen, onToggle, onThemeToggle }) {
   }, [lines]);
 
   useEffect(() => {
-    if (isOpen && inputRef.current) inputRef.current.focus();
-  }, [isOpen]);
+    const handleDeploy = () => {
+      const deployLogs = [
+        'Starting deployment...',
+        'Checking system health... OK',
+        'Optimizing assets...',
+        'Uploading to nebula-edge...',
+        'Deployment successful! Portfolio updated. 🚀'
+      ];
+      let i = 0;
+      const interval = setInterval(() => {
+        setLines(prev => [...prev, { type: 'output', text: deployLogs[i] }]);
+        i++;
+        if (i >= deployLogs.length) clearInterval(interval);
+      }, 400);
+    };
+    window.addEventListener('terminal-deploy', handleDeploy);
+    return () => window.removeEventListener('terminal-deploy', handleDeploy);
+  }, []);
 
   const run = (cmd) => {
     const trimmed = cmd.trim().toLowerCase();
@@ -65,6 +91,9 @@ export default function Terminal({ isOpen, onToggle, onThemeToggle }) {
     } else if (trimmed === 'theme') {
       onThemeToggle?.();
       setLines([...newLines, { type: 'output', text: 'Theme toggled.' }]);
+    } else if (trimmed.startsWith('cat ')) {
+      const args = trimmed.split(' ').slice(1);
+      setLines([...newLines, { type: 'output', text: COMMANDS.cat(args) }]);
     } else if (COMMANDS[trimmed]) {
       setLines([...newLines, { type: 'output', text: COMMANDS[trimmed]() }]);
     } else {

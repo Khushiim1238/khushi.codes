@@ -8,10 +8,13 @@ import ProjectsTab from './components/tabs/ProjectsTab';
 import SkillsTab from './components/tabs/SkillsTab';
 import ExperienceTab from './components/tabs/ExperienceTab';
 import ContactTab from './components/tabs/ContactTab';
+import AIPanel from './components/AIPanel';
+import CustomCursor from './components/CustomCursor';
+import CommandPalette from './components/CommandPalette';
 import {
   Sun, Moon, Minus, Square, X, ChevronRight,
   FileCode2, FileText, FileJson, FileType, FileTerminal, ScrollText,
-  GitBranch, CircleCheck, TriangleAlert, Rocket, Bot,
+  GitBranch, CircleCheck, TriangleAlert, Rocket, Command,
 } from 'lucide-react';
 
 const FILES = [
@@ -36,6 +39,9 @@ function App() {
   const [openTabs, setOpenTabs] = useState(['home.jsx']);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [terminalOpen, setTerminalOpen] = useState(true);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState(null);
   const [scrollLine, setScrollLine] = useState(1);
   const editorRef = useRef(null);
@@ -52,7 +58,37 @@ function App() {
     return () => el.removeEventListener('scroll', handler);
   }, [activeTab]);
 
+  // Handle Ctrl+K
+  useEffect(() => {
+    const handleKeydown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeydown);
+    return () => window.removeEventListener('keydown', handleKeydown);
+  }, []);
+
+  const playClickSound = () => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(800, ctx.currentTime);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.1);
+    } catch (e) { /* ignore */ }
+  };
+
   const navigate = (fileId) => {
+    playClickSound();
     if (!openTabs.includes(fileId)) {
       setOpenTabs(t => [...t, fileId]);
     }
@@ -104,6 +140,7 @@ function App() {
   return (
     <>
       <StarField />
+      <CustomCursor />
       <div className="ide">
         {/* Title Bar */}
         <div className="titlebar">
@@ -172,9 +209,13 @@ function App() {
           </div>
           {sidebarOpen && (
             <div className="sidebar-section">
-              <button className="sidebar-file" style={{ color: 'var(--accent-teal)' }}>
-                <span className="sidebar-file-icon"><Bot size={14} /></span>
-                <span>Ask AI</span>
+              <button 
+                className={`sidebar-file${aiOpen ? ' active' : ''}`} 
+                style={{ color: 'var(--accent-teal)' }}
+                onClick={() => setAiOpen(!aiOpen)}
+              >
+                <span className="sidebar-file-icon"><Moon size={14} /></span>
+                <span>Luna AI</span>
               </button>
             </div>
           )}
@@ -202,6 +243,15 @@ function App() {
                 </div>
               );
             })}
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', paddingRight: 8 }}>
+              <button 
+                className="titlebar-btn" 
+                onClick={() => setCommandPaletteOpen(true)}
+                title="Command Palette (Ctrl+K)"
+              >
+                <Command size={14} />
+              </button>
+            </div>
           </div>
 
           {/* Breadcrumbs */}
@@ -226,26 +276,52 @@ function App() {
             </div>
           </div>
 
-          {/* Terminal */}
-          <Terminal
-            isOpen={terminalOpen}
-            onToggle={() => setTerminalOpen(t => !t)}
-            onThemeToggle={toggleTheme}
+            <Terminal
+              isOpen={terminalOpen}
+              onToggle={() => setTerminalOpen(t => !t)}
+              onThemeToggle={toggleTheme}
+            />
+          </div>
+
+          {/* AI Panel */}
+          <AIPanel isOpen={aiOpen} onClose={() => setAiOpen(false)} />
+
+          <CommandPalette 
+            isOpen={commandPaletteOpen} 
+            onClose={() => setCommandPaletteOpen(false)}
+            onNavigate={navigate}
+            onAction={(action) => {
+              if (action === 'toggleTheme') toggleTheme();
+              if (action === 'toggleTerminal') setTerminalOpen(t => !t);
+            }}
           />
-        </div>
 
         {/* Status Bar */}
         <div className="statusbar">
           <div className="statusbar-left">
             <span className="statusbar-kc">K.C</span>
+            <div className="status-health">
+              <div className="health-item">Focus: <span className="health-val">React.js</span></div>
+              <div className="health-item">Coffee: <span className="health-val">[|||||---] 60%</span></div>
+              <div className="health-item">Brain: <span className="health-val">98%</span></div>
+            </div>
             <span className="statusbar-item"><GitBranch size={14} /> main</span>
             <span className="statusbar-item"><CircleCheck size={14} /> 0</span>
-            <span className="statusbar-item"><TriangleAlert size={14} /> 0</span>
           </div>
           <div className="statusbar-right">
+            <button className="ship-it-btn" onClick={() => {
+              setTerminalOpen(true);
+              window.dispatchEvent(new CustomEvent('terminal-deploy'));
+            }}>
+              <Rocket size={12} /> Ship It
+            </button>
             <span className="statusbar-item">Ln {scrollLine}, Col 1</span>
             <span className="statusbar-item">UTF-8</span>
             <span className="statusbar-item">{activeFile?.ext || 'JSX'}</span>
+            <span className="statusbar-item" onClick={() => setSoundEnabled(!soundEnabled)} style={{ cursor: 'pointer' }}>
+              {soundEnabled ? <Rocket size={14} className="terminal-green" /> : <Rocket size={14} style={{ opacity: 0.5 }} />}
+              {soundEnabled ? 'SFX ON' : 'SFX OFF'}
+            </span>
             <span className="statusbar-item"><Rocket size={14} /> Deployed</span>
           </div>
         </div>
