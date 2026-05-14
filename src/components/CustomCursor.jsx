@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export default function CustomCursor() {
   const cursorRef = useRef(null);
@@ -10,15 +10,28 @@ export default function CustomCursor() {
     const cursor = cursorRef.current;
     if (!cursor) return;
 
+    let mouseX = 0, mouseY = 0;
+    let curX = 0, curY = 0;
+
     const moveMouse = (e) => {
-      cursor.style.left = e.clientX + 'px';
-      cursor.style.top = e.clientY + 'px';
+      mouseX = e.clientX;
+      mouseY = e.clientY;
       if (!isVisible) setIsVisible(true);
     };
 
+    // Smooth follow with lerp
+    let raf;
+    const animate = () => {
+      curX += (mouseX - curX) * 0.15;
+      curY += (mouseY - curY) * 0.15;
+      cursor.style.left = curX + 'px';
+      cursor.style.top = curY + 'px';
+      raf = requestAnimationFrame(animate);
+    };
+    raf = requestAnimationFrame(animate);
+
     const handleMouseDown = () => setIsClicking(true);
     const handleMouseUp = () => setIsClicking(false);
-
     const handleMouseEnter = () => setIsHovering(true);
     const handleMouseLeave = () => setIsHovering(false);
 
@@ -26,27 +39,26 @@ export default function CustomCursor() {
     window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mouseup', handleMouseUp);
 
-    // Initial setup for existing elements
-    const elements = document.querySelectorAll('a, button, .project-item, .gallery-item, .skill-tag, .filter-btn, .tab, .sidebar-file');
-    elements.forEach(el => {
-      el.addEventListener('mouseenter', handleMouseEnter);
-      el.addEventListener('mouseleave', handleMouseLeave);
-    });
-
-    // MutationObserver to handle dynamic elements (like tabs)
     const observer = new MutationObserver(() => {
-      const newElements = document.querySelectorAll('a, button, .project-item, .gallery-item, .skill-tag, .filter-btn, .tab, .sidebar-file');
-      newElements.forEach(el => {
+      const elements = document.querySelectorAll('a, button, .project-item, .gallery-item, .skill-tag, .filter-btn, .tab, .sidebar-file, .command-item, .cta-btn, .ext-install-btn');
+      elements.forEach(el => {
         el.removeEventListener('mouseenter', handleMouseEnter);
         el.removeEventListener('mouseleave', handleMouseLeave);
         el.addEventListener('mouseenter', handleMouseEnter);
         el.addEventListener('mouseleave', handleMouseLeave);
       });
     });
-
     observer.observe(document.body, { childList: true, subtree: true });
 
+    // Initial setup
+    const elements = document.querySelectorAll('a, button, .project-item, .gallery-item, .skill-tag, .filter-btn, .tab, .sidebar-file');
+    elements.forEach(el => {
+      el.addEventListener('mouseenter', handleMouseEnter);
+      el.addEventListener('mouseleave', handleMouseLeave);
+    });
+
     return () => {
+      cancelAnimationFrame(raf);
       window.removeEventListener('mousemove', moveMouse);
       window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mouseup', handleMouseUp);
@@ -59,16 +71,13 @@ export default function CustomCursor() {
   }, [isVisible]);
 
   return (
-    <div 
-      id="cursor" 
+    <div
+      id="cursor"
       ref={cursorRef}
       className={`${isHovering ? 'hover' : ''} ${isClicking ? 'click' : ''}`}
-      style={{ display: isVisible ? 'block' : 'none' }}
+      style={{ display: isVisible ? 'flex' : 'none' }}
     >
-      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="1" y="1" width="30" height="30" rx="4" fill="rgba(13, 17, 23, 0.9)" stroke="var(--accent)" strokeWidth="1.5"/>
-        <text x="6" y="22" fontFamily="monospace" fontSize="14" fill="var(--accent)" fontWeight="bold">&lt;/&gt;</text>
-      </svg>
+      <span className="cursor-tag">&lt;/&gt;</span>
     </div>
   );
 }

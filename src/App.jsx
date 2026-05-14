@@ -11,10 +11,12 @@ import ContactTab from './components/tabs/ContactTab';
 import AIPanel from './components/AIPanel';
 import CustomCursor from './components/CustomCursor';
 import CommandPalette from './components/CommandPalette';
+import ExtensionMarketplace from './components/ExtensionMarketplace';
+import { projects } from './data/projects';
 import {
   Sun, Moon, Minus, Square, X, ChevronRight,
   FileCode2, FileText, FileJson, FileType, FileTerminal, ScrollText,
-  GitBranch, CircleCheck, TriangleAlert, Rocket, Command,
+  GitBranch, CircleCheck, TriangleAlert, Rocket, Command, Files, Blocks,
 } from 'lucide-react';
 
 const FILES = [
@@ -44,6 +46,8 @@ function App() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState(null);
   const [scrollLine, setScrollLine] = useState(1);
+  const [sidebarView, setSidebarView] = useState('explorer'); // 'explorer' or 'extensions'
+  const [selectedProject, setSelectedProject] = useState(null);
   const editorRef = useRef(null);
 
   // Track scroll position for status bar line number
@@ -118,8 +122,17 @@ function App() {
       navigate(item);
     } else if (menu === 'Help') {
       if (item === 'GitHub') window.open('https://github.com/Khushiim1238', '_blank');
-      if (item === 'LinkedIn') window.open('https://linkedin.com', '_blank');
+      if (item === 'LinkedIn') window.open('https://linkedin.com/in/khushi', '_blank');
     }
+  };
+
+  const openProject = (project) => {
+    playClickSound();
+    setSelectedProject(project);
+    if (!openTabs.includes('marketplace')) {
+        setOpenTabs(t => [...t, 'marketplace']);
+    }
+    setActiveTab('marketplace');
   };
 
   const activeFile = FILES.find(f => f.id === activeTab);
@@ -133,6 +146,7 @@ function App() {
       case 'skills.ts': return <SkillsTab />;
       case 'experience.log': return <ExperienceTab />;
       case 'contact.sh': return <ContactTab />;
+      case 'marketplace': return <ExtensionMarketplace project={selectedProject} />;
       default: return <HomeTab onNavigate={navigate} />;
     }
   };
@@ -186,39 +200,79 @@ function App() {
           </div>
         </div>
 
+        {/* Activity Bar */}
+        <div className="activity-bar">
+          <button 
+            className={`activity-btn${sidebarView === 'explorer' ? ' active' : ''}`}
+            onClick={() => { setSidebarView('explorer'); setSidebarOpen(true); }}
+            title="Explorer"
+          >
+            <Files className="activity-icon" />
+          </button>
+          <button 
+            className={`activity-btn${sidebarView === 'extensions' ? ' active' : ''}`}
+            onClick={() => { setSidebarView('extensions'); setSidebarOpen(true); }}
+            title="Extensions"
+          >
+            <Blocks className="activity-icon" />
+          </button>
+          <div style={{ marginTop: 'auto' }}>
+            <button className="activity-btn" onClick={() => setAiOpen(!aiOpen)} title="Luna AI">
+              <Moon className="activity-icon" style={{ color: 'var(--accent-teal)' }} />
+            </button>
+          </div>
+        </div>
+
         {/* Sidebar */}
         <div className={`sidebar${sidebarOpen ? '' : ' collapsed'}`}>
-          <div className="sidebar-header">Explorer</div>
+          <div className="sidebar-header">{sidebarView === 'explorer' ? 'Explorer' : 'Extensions'}</div>
+          
           <div className="sidebar-files">
-            <div style={{ padding: '4px 16px 8px', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 600 }}>
-              {sidebarOpen && <><ChevronRight size={10} style={{ transform: 'rotate(90deg)', marginRight: 4 }} /> Portfolio</>}
-            </div>
-            {FILES.map(f => (
-              <button
-                key={f.id}
-                className={`sidebar-file${activeTab === f.id ? ' active' : ''}`}
-                onClick={() => navigate(f.id)}
-                title={f.label}
-              >
-                <span className="sidebar-file-icon" style={{ color: activeTab === f.id ? 'var(--accent)' : 'var(--text-muted)' }}>
-                  {f.icon}
-                </span>
-                {sidebarOpen && <span>{f.label}</span>}
-              </button>
-            ))}
+            {sidebarView === 'explorer' ? (
+              <>
+                <div style={{ padding: '4px 16px 8px', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 600 }}>
+                  {sidebarOpen && <><ChevronRight size={10} style={{ transform: 'rotate(90deg)', marginRight: 4 }} /> Portfolio</>}
+                </div>
+                {FILES.map(f => (
+                  <button
+                    key={f.id}
+                    className={`sidebar-file${activeTab === f.id ? ' active' : ''}`}
+                    onClick={() => navigate(f.id)}
+                    title={f.label}
+                  >
+                    <span className="sidebar-file-icon" style={{ color: activeTab === f.id ? 'var(--accent)' : 'var(--text-muted)' }}>
+                      {f.icon}
+                    </span>
+                    {sidebarOpen && <span>{f.label}</span>}
+                  </button>
+                ))}
+              </>
+            ) : (
+              <>
+                <div style={{ padding: '4px 16px 8px', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 600 }}>
+                  {sidebarOpen && 'Recommended'}
+                </div>
+                {projects.map(p => (
+                  <button
+                    key={p.name}
+                    className={`sidebar-file${selectedProject?.name === p.name && activeTab === 'marketplace' ? ' active' : ''}`}
+                    onClick={() => openProject(p)}
+                    title={p.name}
+                  >
+                    <div className="sidebar-file-icon" style={{ width: 24, height: 24, background: p.langColor, borderRadius: 4, marginRight: 8, fontSize: 10, color: '#fff', fontWeight: 700 }}>
+                      {p.name[0]}
+                    </div>
+                    {sidebarOpen && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600 }}>{p.name}</span>
+                        <span style={{ fontSize: 11, opacity: 0.6 }}>{p.language}</span>
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </>
+            )}
           </div>
-          {sidebarOpen && (
-            <div className="sidebar-section">
-              <button 
-                className={`sidebar-file${aiOpen ? ' active' : ''}`} 
-                style={{ color: 'var(--accent-teal)' }}
-                onClick={() => setAiOpen(!aiOpen)}
-              >
-                <span className="sidebar-file-icon"><Moon size={14} /></span>
-                <span>Luna AI</span>
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Main Editor Area */}
@@ -234,9 +288,9 @@ function App() {
                   onClick={() => setActiveTab(tabId)}
                 >
                   <span className="tab-icon" style={{ color: activeTab === tabId ? 'var(--accent)' : 'var(--text-muted)' }}>
-                    {file?.icon}
+                    {tabId === 'marketplace' ? <Blocks size={14} /> : file?.icon}
                   </span>
-                  {file?.label}
+                  {tabId === 'marketplace' ? `Extension: ${selectedProject?.name}` : file?.label}
                   <button className="tab-close" onClick={(e) => closeTab(tabId, e)}>
                     <X size={11} />
                   </button>
@@ -284,7 +338,7 @@ function App() {
           </div>
 
           {/* AI Panel */}
-          <AIPanel isOpen={aiOpen} onClose={() => setAiOpen(false)} />
+          <AIPanel isOpen={aiOpen} onClose={() => setAiOpen(false)} activeTab={activeTab} />
 
           <CommandPalette 
             isOpen={commandPaletteOpen} 
